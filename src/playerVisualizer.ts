@@ -41,7 +41,7 @@ export class PlayerVisualizer {
       dataUrl: config.dataUrl || 'https://flowz-iwsdk-dev.onrender.com/data',
       useMock: config.useMock ?? false,
       scaleFactor: config.scaleFactor ?? 0.01,  // Hammer units to meters
-      offset: config.offset ?? new THREE.Vector3(-5000, 0, -5000),  // Example centering; tune as needed
+      offset: config.offset ?? new THREE.Vector3(0, 0, 0),  // Example centering; tune as needed
       rotation: config.rotation ?? new THREE.Euler(0, Math.PI / 2, 0),  // Align Z-up (GMod) to Y-up (Three.js)
       updateInterval: config.updateInterval ?? 100,  // Match Lua's 0.1s frequency
       playerRadius: config.playerRadius ?? 0.5,
@@ -106,59 +106,66 @@ export class PlayerVisualizer {
   }
 
   private async updatePlayers(): Promise<void> {
-    const players = await this.fetchData();
-    if (!players || players.length === 0) return;
+  const players = await this.fetchData();
+  if (!players || players.length === 0) return;
 
-    // Clear old player entities
-    this.playerEntities.forEach(({ entity, mesh }) => {
-      if (entity.object3D) {
-        this.cityMesh.remove(entity.object3D);
-      }
-      mesh.geometry.dispose();
-      if (mesh.material instanceof THREE.MeshBasicMaterial) {
-        mesh.material.dispose();
-      }
-    });
-    this.playerEntities.clear();
+  // Clear old player entities
+  this.playerEntities.forEach(({ entity, mesh }) => {
+    if (entity.object3D) {
+      this.cityMesh.remove(entity.object3D);
+    }
+    mesh.geometry.dispose();
+    if (mesh.material instanceof THREE.MeshBasicMaterial) {
+      mesh.material.dispose();
+    }
+  });
+  this.playerEntities.clear();
 
-    players.forEach((player) => {
-      const gmodPos = new THREE.Vector3(player.x, player.y, player.z);
-      const worldPos = this.mapCoordinates(gmodPos);
+  players.forEach((player) => {
+    // Enhanced logging for debugging
+    console.log('Raw player data:', JSON.stringify(player, null, 2));
 
-      // Create sphere mesh
-      const geometry = new THREE.SphereGeometry(this.config.playerRadius);
-      const material = new THREE.MeshBasicMaterial({ color: this.config.playerColor });
-      const sphereMesh = new THREE.Mesh(geometry, material);
+    const gmodPos = new THREE.Vector3(player.x, player.y, player.z);
+    const worldPos = this.mapCoordinates(gmodPos);
 
-      // Create ECS TransformEntity and parent to cityMesh
-      const playerEntity = this.world.createTransformEntity(sphereMesh);
-      if (playerEntity.object3D) {
-        playerEntity.object3D.position.copy(worldPos);
-        this.cityMesh.add(playerEntity.object3D);
-      } else {
-        console.warn(`Failed to create object3D for player ${player.name}`);
-        geometry.dispose();
-        material.dispose();
-        return;  // Skip this player
-      }
+    // Create sphere mesh
+    const geometry = new THREE.SphereGeometry(this.config.playerRadius);
+    const material = new THREE.MeshBasicMaterial({ color: this.config.playerColor });
+    const sphereMesh = new THREE.Mesh(geometry, material);
 
-      // Store for cleanup
-      this.playerEntities.set(player.name, { entity: playerEntity, mesh: sphereMesh });
+    // Create ECS TransformEntity and parent to cityMesh
+    const playerEntity = this.world.createTransformEntity(sphereMesh);
+    if (playerEntity.object3D) {
+      playerEntity.object3D.position.copy(worldPos);
+      this.cityMesh.add(playerEntity.object3D);
+    } else {
+      console.warn(`Failed to create object3D for player ${player.name}`);
+      geometry.dispose();
+      material.dispose();
+      return;  // Skip this player
+    }
 
-      // Log and basic velocity visualization (color tint by speed)
-      const vel = player.velocity;
-      const speed = Math.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2);
-      console.log(`Positioned ${player.name} at [${worldPos.toArray().join(', ')}]; speed: ${speed.toFixed(2)}`);
-      material.color.setHSL((speed / 100) % 1, 1, 0.5);  // Hue based on speed
+    // Store for cleanup
+    this.playerEntities.set(player.name, { entity: playerEntity, mesh: sphereMesh });
 
-      // Placeholder label (extend with THREE.FontLoader for text)
-      const labelGeometry = new THREE.BoxGeometry(0.5, 0.1, 0.1);
-      const labelMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-      const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
-      labelMesh.position.set(0, this.config.playerRadius + 0.2, 0);
-      sphereMesh.add(labelMesh);
-    });
-  }
+    // Robust velocity handling and visualization
+    const vel = player.velocity || { x: 0, y: 0, z: 0 };  // Default to zero vector
+    const speed = Math.sqrt(
+      (isNaN(vel.x) ? 0 : vel.x) ** 2 +
+      (isNaN(vel.y) ? 0 : vel.y) ** 2 +
+      (isNaN(vel.z) ? 0 : vel.z) ** 2
+    );
+    console.log(`Positioned ${player.name} at [${worldPos.toArray().join(', ')}]; speed: ${speed.toFixed(2)}`);
+    material.color.setHSL((speed / 100) % 1, 1, 0.5);  // Hue based on speed
+
+    // Placeholder label (extend with THREE.FontLoader for text)
+    const labelGeometry = new THREE.BoxGeometry(0.5, 0.1, 0.1);
+    const labelMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
+    labelMesh.position.set(0, this.config.playerRadius + 0.2, 0);
+    sphereMesh.add(labelMesh);
+  });
+}
 
   private startPolling(): void {
     // Initial update
