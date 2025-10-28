@@ -1,3 +1,5 @@
+import * as THREE from 'three';  // Added for Vector3 and Euler types in configuration
+
 import {
   AssetManifest,
   AssetType,
@@ -102,8 +104,10 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
   // Initialize the player visualizer with the city as the parent
   const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
-    useMock: false,  // Set to false for live data from https://flowz-odll.onrender.com/data
-    // Additional config options (e.g., scaleFactor: 0.01, offset: new THREE.Vector3(-5000, 0, -5000)) can be tuned here
+    useMock: false,
+    offset: new THREE.Vector3(-19.205928955078125, 94.6713671875, -26.8803125),  // Maps spire to (0, 0, 0) in GLB local space
+    playerRadius: 0.005,  // Scaled down to match city (0.01); adjust if oversized
+    // Retain other defaults for rotation and interval
   });
 
   const { scene: plantMesh } = AssetManager.getGLTF("plantSansevieria")!;
