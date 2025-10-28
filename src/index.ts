@@ -101,7 +101,10 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     });
 
   // Initialize the player visualizer with the city as the parent
-  const playerVisualizer = new PlayerVisualizer(world, cityMesh);
+  const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
+    useMock: true,  // Set to false for live data from https://flowz-odll.onrender.com/data
+    // Additional config options (e.g., scaleFactor: 0.01, offset: new THREE.Vector3(-5000, 0, -5000)) can be tuned here
+  });
 
   const { scene: plantMesh } = AssetManager.getGLTF("plantSansevieria")!;
 
@@ -161,4 +164,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   logoBanner.rotateY(Math.PI);
 
   world.registerSystem(PanelSystem).registerSystem(RobotSystem);
+
+  // Optional: Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    playerVisualizer.destroy();
+  });
 });
