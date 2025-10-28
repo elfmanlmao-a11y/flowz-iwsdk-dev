@@ -24,7 +24,7 @@ interface PlayerVisualizerConfig {
   playerRadius: number;
   playerColor: number;
   debugMode?: boolean;
-  boundingBox?: THREE.Box3;  // Pre-defined bounds in world space; if omitted, auto-computed from cityMesh
+  boundingBox?: THREE.Box3;  // Pre-defined bounds (treated as local space for consistency)
   showBounds?: boolean;      // Render wireframe box for debugging
   boundsExpansion?: number;  // Scalar to inflate computed bounds (default: 1.0)
 }
@@ -58,7 +58,7 @@ export class PlayerVisualizer {
       boundsExpansion: (config.boundsExpansion ?? 1.0) as number,
     };
 
-    // Compute or use provided bounds (in world space)
+    // Compute or use provided bounds (treated as local space)
     this.cityBounds = config.boundingBox || new THREE.Box3().setFromObject(this.cityMesh);
 
     // Apply expansion after initial computation
@@ -203,11 +203,10 @@ export class PlayerVisualizer {
       const gmodPos = new THREE.Vector3(player.x, player.y, player.z);
       const worldPos = this.mapCoordinates(gmodPos);
 
-      // Constrain to bounding box (check in world space)
-      const tempPos = worldPos.clone().applyMatrix4(this.cityMesh.matrixWorld);
-      if (!this.cityBounds || !this.cityBounds.containsPoint(tempPos)) {
+      // Constrain to bounding box (check in local space)
+      if (!this.cityBounds || !this.cityBounds.containsPoint(worldPos)) {
         const boundsInfo = this.cityBounds ? `[${this.cityBounds.min.toArray().join(', ')} to ${this.cityBounds.max.toArray().join(', ')}]` : '(bounds not computed)';
-        console.warn(`Player ${player.name} at local [${worldPos.toArray().join(', ')}] world [${tempPos.toArray().join(', ')}] is outside city bounds ${boundsInfo}; skipping render.`);
+        console.warn(`Player ${player.name} at local [${worldPos.toArray().join(', ')}] is outside city bounds ${boundsInfo}; skipping render.`);
         return;  // Skip rendering
       }
 
@@ -239,11 +238,11 @@ export class PlayerVisualizer {
       console.log(`Positioned ${player.name} at [${worldPos.toArray().join(', ')}]; speed: ${speed.toFixed(2)}`);
       material.color.setHSL((speed / 100) % 1, 1, 0.5);
 
-      // Placeholder label
-      const labelGeometry = new THREE.BoxGeometry(0.5, 0.1, 0.1);
+      // Placeholder label (increased size for visibility testing; effective ~0.5m x 0.1m x 0.1m after scale)
+      const labelGeometry = new THREE.BoxGeometry(50, 10, 10);
       const labelMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       const labelMesh = new THREE.Mesh(labelGeometry, labelMaterial);
-      labelMesh.position.set(0, this.config.playerRadius + 0.2, 0);
+      labelMesh.position.set(0, this.config.playerRadius + 20, 0);  // Adjusted offset for larger size
       sphereMesh.add(labelMesh);
     });
   }

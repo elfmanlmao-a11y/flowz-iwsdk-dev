@@ -95,6 +95,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const { scene: cityMesh } = AssetManager.getGLTF("bigCity")!;
   cityMesh.position.set(0, .9, -2); // Center on the desk
   cityMesh.scale.setScalar(0.01); // Scale down the city to fit on the desk
+  cityMesh.updateMatrix();  // Ensure matrix reflects position and scale
+  cityMesh.updateMatrixWorld(true);  // Force update for world transformations
   world
     .createTransformEntity(cityMesh)
     .addComponent(Interactable)
@@ -106,14 +108,15 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
     useMock: true,  // Set to true for calibration with reference points; change to false for live data
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',  
-    offset: new THREE.Vector3(-106.6, 1.904, 81.87),  // Calibrated to center midpoint of reference points
-    playerRadius: 0.00005,
+    scaleFactor: 0.005463,  // Adjusted to fit GMod extents into bounding box
+    offset: new THREE.Vector3(-20.58, 49.557, 23.42),  // Adjusted to center fitted points in bounding box
+    playerRadius: 5,  // Increased for visibility (effective ~0.05m after city scale)
     debugMode: true,
     showBounds: true,
     boundingBox: new THREE.Box3(
-      new THREE.Vector3(-85, -2, -75),  // Minimum (lower-left corner; adjust negatives for more negative space)
-      new THREE.Vector3(85, 100, 95)      // Maximum (upper-right corner; adjust positives for more positive space)
-  ),
+      new THREE.Vector3(-85, -2, -75),  // Minimum
+      new THREE.Vector3(85, 100, 95)   // Maximum
+    ),
     // Retain other defaults for rotation and interval
   });
 
