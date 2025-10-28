@@ -38,7 +38,7 @@ export class PlayerVisualizer {
     this.cityMesh = cityMesh;
     this.loader = new GLTFLoader();
     this.config = {
-      dataUrl: config.dataUrl || 'https://flowz-odll.onrender.com/data',
+      dataUrl: config.dataUrl || 'https://flowz-iwsdk-dev.onrender.com/data',
       useMock: config.useMock ?? false,
       scaleFactor: config.scaleFactor ?? 0.01,  // Hammer units to meters
       offset: config.offset ?? new THREE.Vector3(0, 0, 0),  // Tuned below for landmark
