@@ -1,4 +1,4 @@
-import * as THREE from 'three';  // Added for Vector3 and Euler types in configuration
+import * as THREE from 'three';  // Required for Vector3 and Euler in configuration
 
 import {
   AssetManifest,
@@ -104,9 +104,16 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
   // Initialize the player visualizer with the city as the parent
   const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
-    useMock: false,
-    offset: new THREE.Vector3(-19.205928955078125, 94.6713671875, -26.8803125),  // Maps spire to (0, 0, 0) in GLB local space
-    playerRadius: 0.005,  // Scaled down to match city (0.01); adjust if oversized
+    useMock: true,  // Set to true for calibration with reference points; change to false for live data
+    dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',  
+    offset: new THREE.Vector3(-106.6, 1.904, 81.87),  // Calibrated to center midpoint of reference points
+    playerRadius: 0.00005,
+    debugMode: true,
+    showBounds: true,
+    boundingBox: new THREE.Box3(
+      new THREE.Vector3(-85, -2, -75),  // Minimum (lower-left corner; adjust negatives for more negative space)
+      new THREE.Vector3(85, 100, 95)      // Maximum (upper-right corner; adjust positives for more positive space)
+  ),
     // Retain other defaults for rotation and interval
   });
 
