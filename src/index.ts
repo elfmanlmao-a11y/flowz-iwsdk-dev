@@ -110,6 +110,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',  
     scaleFactor: 0.005463,  // Adjusted to fit GMod extents into bounding box
     offset: new THREE.Vector3(-20.58, 49.557, 23.42),  // Adjusted to center fitted points in bounding box
+    rotation: new THREE.Euler(0, Math.PI / 2, 0),  // 90 degrees counter-clockwise around Y-axis
     playerRadius: 5,  // Increased for visibility (effective ~0.05m after city scale)
     debugMode: true,
     showBounds: true,
@@ -117,7 +118,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       new THREE.Vector3(-85, -2, -75),  // Minimum
       new THREE.Vector3(85, 100, 95)   // Maximum
     ),
-    // Retain other defaults for rotation and interval
+    // Retain other defaults for interval
   });
 
   const { scene: plantMesh } = AssetManager.getGLTF("plantSansevieria")!;
