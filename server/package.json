@@ -1,0 +1,23 @@
+{
+  "name": "flowz-player-relay-server",
+  "version": "1.0.0",
+  "description": "Express.js server for relaying Garry's Mod player data to IWSDK visualization",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
