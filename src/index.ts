@@ -1,5 +1,7 @@
-import * as THREE from 'three';  // Required for Vector3 and Euler in configuration
+// Import necessary libraries and components
+import * as THREE from 'three'; // For 3D math like positions and rotations
 
+// Core SDK imports for building the VR world
 import {
   AssetManifest,
   AssetType,
@@ -12,6 +14,7 @@ import {
   World,
 } from "@iwsdk/core";
 
+// Additional SDK components for interactions and audio
 import {
   AudioSource,
   DistanceGrabbable,
@@ -22,166 +25,121 @@ import {
   ScreenSpace,
 } from "@iwsdk/core";
 
+// Environment and locomotion components
 import { EnvironmentType, LocomotionEnvironment } from "@iwsdk/core";
 
+// Custom systems and visualizers
 import { PanelSystem } from "./panel.js";
-
-import { Robot } from "./robot.js";
-
-import { RobotSystem } from "./robot.js";
+import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from "./playerVisualizer";
 
+// Define the assets to load (like sounds, textures, and 3D models)
 const assets: AssetManifest = {
-  chimeSound: {
-    url: "/audio/chime.mp3",
-    type: AssetType.Audio,
-    priority: "background",
-  },
-  webxr: {
-    url: "/textures/webxr.png",
-    type: AssetType.Texture,
-    priority: "critical",
-  },
-  environmentDesk: {
-    url: "/gltf/environmentDesk/environmentDesk.gltf",
-    type: AssetType.GLTF,
-    priority: "critical",
-  },
-  plantSansevieria: {
-    url: "/gltf/plantSansevieria/plantSansevieria.gltf",
-    type: AssetType.GLTF,
-    priority: "critical",
-  },
-  bigCity: {
-    url: "/gltf/BigCity/BigcityV1.glb",
-    type: AssetType.GLTF,
-    priority: "critical",
-  },
-  robot: {
-    url: "/gltf/robot/robot.gltf",
-    type: AssetType.GLTF,
-    priority: "critical",
-  },
+  chimeSound: { url: "/audio/chime.mp3", type: AssetType.Audio, priority: "background" },
+  webxr: { url: "/textures/webxr.png", type: AssetType.Texture, priority: "critical" },
+  environmentDesk: { url: "/gltf/environmentDesk/environmentDesk.gltf", type: AssetType.GLTF, priority: "critical" },
+  plantSansevieria: { url: "/gltf/plantSansevieria/plantSansevieria.gltf", type: AssetType.GLTF, priority: "critical" },
+  bigCity: { url: "/gltf/BigCity/BigcityV1.glb", type: AssetType.GLTF, priority: "critical" },
+  robot: { url: "/gltf/robot/robot.gltf", type: AssetType.GLTF, priority: "critical" },
 };
 
+// Create the VR world and set it up
 World.create(document.getElementById("scene-container") as HTMLDivElement, {
   assets,
   xr: {
     sessionMode: SessionMode.ImmersiveVR,
     offer: "always",
-    // Optional structured features; layers/local-floor are offered by default
-    features: { handTracking: true, layers: true },
+    features: { handTracking: true, layers: true }, // Enable hand tracking and layers
   },
   features: {
-    locomotion: { useWorker: true },
-    grabbing: true,
-    physics: false,
-    sceneUnderstanding: false,
+    locomotion: { useWorker: true }, // Smooth movement
+    grabbing: true, // Allow grabbing objects
+    physics: false, // No physics simulation
+    sceneUnderstanding: false, // No AI scene analysis
   },
 }).then((world) => {
+  // Set up the camera (user's viewpoint)
   const { camera } = world;
+  camera.position.set(-4, 1.5, -6); // Position the camera
+  camera.rotateY(-Math.PI * 0.75); // Rotate it slightly
 
-  camera.position.set(-4, 1.5, -6);
-  camera.rotateY(-Math.PI * 0.75);
+  // Add the desk environment
+  const { scene: deskMesh } = AssetManager.getGLTF("environmentDesk")!;
+  deskMesh.rotateY(Math.PI); // Rotate to face correctly
+  deskMesh.position.set(0, -0.1, 0); // Place it on the floor
+  world.createTransformEntity(deskMesh)
+    .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC }); // Make it walkable
 
-  const { scene: envMesh } = AssetManager.getGLTF("environmentDesk")!;
-  envMesh.rotateY(Math.PI);
-  envMesh.position.set(0, -0.1, 0);
-  world
-    .createTransformEntity(envMesh)
-    .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
-
-  // Add the BigCity model
+  // Add the big city model
   const { scene: cityMesh } = AssetManager.getGLTF("bigCity")!;
-  cityMesh.position.set(0, .9, -2); // Center on the desk
-  cityMesh.scale.setScalar(0.01); // Scale down the city to fit on the desk
-  cityMesh.updateMatrix();  // Ensure matrix reflects position and scale
-  cityMesh.updateMatrixWorld(true);  // Force update for world transformations
-  world
-    .createTransformEntity(cityMesh)
-    .addComponent(Interactable)
-    .addComponent(DistanceGrabbable, {
-      movementMode: MovementMode.MoveFromTarget,
-    });
+  cityMesh.position.set(0, 0.9, -2); // Place it on the desk
+  cityMesh.scale.setScalar(0.01); // Make it small to fit
+  cityMesh.updateMatrix(); // Update its position and scale
+  cityMesh.updateMatrixWorld(true); // Update for the whole scene
+  world.createTransformEntity(cityMesh)
+    .addComponent(Interactable) // Allow interactions
+    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget }); // Allow grabbing from afar
 
-  // Initialize the player visualizer with the city as the parent
+  // Set up player visualizer (shows players in the city)
   const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
-    useMock: true,  // Set to true for calibration with reference points; change to false for live data
-    dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',  
-    scaleFactor: 0.005463,  // Adjusted to fit GMod extents into bounding box
-    offset: new THREE.Vector3(-20.58, 49.557, 23.42),  // Adjusted to center fitted points in bounding box
-    rotation: new THREE.Euler(0, Math.PI / 2, 0),  // 90 degrees counter-clockwise around Y-axis
-    playerRadius: 5,  // Increased for visibility (effective ~0.05m after city scale)
-    debugMode: true,
-    showBounds: true,
+    useMock: true, // Use test data for setup
+    dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data', // Real data source
+    scaleFactor: 0.005463, // Scale player positions to fit
+    offset: new THREE.Vector3(-20.58, 49.557, 23.42), // Center positions
+    rotation: new THREE.Euler(0, Math.PI / 2, 0), // Rotate 90 degrees counter-clockwise
+    playerRadius: 5, // Size of player markers (big for testing)
+    debugMode: true, // Show debug info
+    showBounds: true, // Show boundary box
     boundingBox: new THREE.Box3(
-      new THREE.Vector3(-85, -2, -75),  // Minimum
-      new THREE.Vector3(85, 100, 95)   // Maximum
+      new THREE.Vector3(-85, -2, -75), // Bottom corner of area
+      new THREE.Vector3(85, 100, 95) // Top corner of area
     ),
-    // Retain other defaults for interval
   });
 
+  // Add a plant model
   const { scene: plantMesh } = AssetManager.getGLTF("plantSansevieria")!;
-
-  plantMesh.position.set(1.2, 0.85, -1.8);
-
-  world
-    .createTransformEntity(plantMesh)
+  plantMesh.position.set(1.2, 0.85, -1.8); // Place it on the desk
+  world.createTransformEntity(plantMesh)
     .addComponent(Interactable)
-    .addComponent(DistanceGrabbable, {
-      movementMode: MovementMode.MoveFromTarget,
-    });
+    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
 
+  // Add a robot model
   const { scene: robotMesh } = AssetManager.getGLTF("robot")!;
-  // defaults for AR
-  robotMesh.position.set(-1.2, 0.4, -1.8);
-  robotMesh.scale.setScalar(1);
-
-  robotMesh.position.set(-1.2, 0.95, -1.8);
-  robotMesh.scale.setScalar(0.5);
-
-  world
-    .createTransformEntity(robotMesh)
+  robotMesh.position.set(-1.2, 0.95, -1.8); // Place it on the desk
+  robotMesh.scale.setScalar(0.5); // Make it half size
+  world.createTransformEntity(robotMesh)
     .addComponent(Interactable)
-    .addComponent(Robot)
+    .addComponent(Robot) // Custom robot behavior
     .addComponent(AudioSource, {
-      src: "/audio/chime.mp3",
-      maxInstances: 3,
-      playbackMode: PlaybackMode.FadeRestart,
+      src: "/audio/chime.mp3", // Sound file
+      maxInstances: 3, // Up to 3 sounds at once
+      playbackMode: PlaybackMode.FadeRestart, // Fade when restarting
     });
 
- /* const panelEntity = world
+  // Commented out: Add a UI panel (uncomment if needed)
+  /* const panelEntity = world
     .createTransformEntity()
-    .addComponent(PanelUI, {
-      config: "/ui/welcome.json",
-      maxHeight: 0.8,
-      maxWidth: 1.6,
-    })
+    .addComponent(PanelUI, { config: "/ui/welcome.json", maxHeight: 0.8, maxWidth: 1.6 })
     .addComponent(Interactable)
-    .addComponent(ScreenSpace, {
-      top: "20px",
-      left: "20px",
-      height: "40%",
-    });
-  panelEntity.object3D!.position.set(0, 1.29, -1.9);*/
+    .addComponent(ScreenSpace, { top: "20px", left: "20px", height: "40%" });
+  panelEntity.object3D!.position.set(0, 1.29, -1.9); */
 
+  // Add a logo banner
   const webxrLogoTexture = AssetManager.getTexture("webxr")!;
-  webxrLogoTexture.colorSpace = SRGBColorSpace;
+  webxrLogoTexture.colorSpace = SRGBColorSpace; // Correct color display
   const logoBanner = new Mesh(
-    new PlaneGeometry(3.39, 0.96),
-    new MeshBasicMaterial({
-      map: webxrLogoTexture,
-      transparent: true,
-    }),
+    new PlaneGeometry(3.39, 0.96), // Flat rectangle
+    new MeshBasicMaterial({ map: webxrLogoTexture, transparent: true }) // With texture
   );
   world.createTransformEntity(logoBanner);
-  logoBanner.position.set(0, 1, 1.8);
-  logoBanner.rotateY(Math.PI);
+  logoBanner.position.set(0, 1, 1.8); // Place it in view
+  logoBanner.rotateY(Math.PI); // Flip it around
 
+  // Start custom systems
   world.registerSystem(PanelSystem).registerSystem(RobotSystem);
 
-  // Optional: Cleanup on page unload
+  // Clean up when page closes
   window.addEventListener('beforeunload', () => {
-    playerVisualizer.destroy();
+    playerVisualizer.destroy(); // Stop player updates
   });
 });
