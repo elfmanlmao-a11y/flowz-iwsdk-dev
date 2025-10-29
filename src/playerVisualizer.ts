@@ -116,8 +116,14 @@ export class PlayerVisualizer {
     const mapped = gmodPos.clone().multiplyScalar(this.config.scaleFactor);
     mapped.add(this.config.offset);
     mapped.applyEuler(this.config.rotation);
+
+    // Correct axis inversions:
+    mapped.x = -mapped.x;  // Fix left/right mirror
+    mapped.z = -mapped.z;  // Fix forward/back mirror
+    mapped.y = -mapped.y;  // This was causing vertical inversion
+
     return mapped;
-  }
+}
 
   // Fake test data for setup
   private getMockData(): PlayerData[] {
