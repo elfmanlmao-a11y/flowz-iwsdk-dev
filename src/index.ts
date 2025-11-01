@@ -84,9 +84,6 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const playerVisualizer = new PlayerVisualizer(world, cityMesh, {
     useMock: false, // Use test data for setup
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data', // Real data source
-    scaleFactor: 0.005463, // Scale player positions to fit
-    offset: new THREE.Vector3(2, 123, 60.836), // Center positions
-    rotation: new THREE.Euler(-Math.PI / 2, Math.PI, 0), // Rotate 90 degrees counter-clockwise
     playerRadius: 2, // Size of player markers (big for testing)
     debugMode: true, // Show debug info
     showBounds: true, // Show boundary box

@@ -21,9 +21,9 @@ interface DataResponse {
 interface PlayerVisualizerConfig {
   dataUrl: string; // URL for real player data
   useMock?: boolean; // Use test data?
-  scaleFactor: number; // How to scale positions
-  offset: THREE.Vector3; // Shift positions
-  rotation: THREE.Euler; // Rotate positions
+  scaleFactor: number; // Retained but unused in current mapping
+  offset: THREE.Vector3; // Retained but unused in current mapping
+  rotation: THREE.Euler; // Retained but unused in current mapping
   updateInterval: number; // How often to check for updates (in ms)
   playerRadius: number; // Size of player markers
   playerColor: number; // Color of markers (hex code)
@@ -54,9 +54,9 @@ export class PlayerVisualizer {
     this.config = {
       dataUrl: config.dataUrl || 'https://flowz-iwsdk-dev.onrender.com/data',
       useMock: config.useMock ?? false,
-      scaleFactor: config.scaleFactor ?? 0.01904, // Default scale (Hammer Units to meters)
-      offset: config.offset ?? new THREE.Vector3(0, 0, 0),
-      rotation: config.rotation ?? new THREE.Euler(0, Math.PI / 2, 0), // Default 90 degree rotation (in radians)
+      scaleFactor: config.scaleFactor ?? 0.01904, // Retained but unused
+      offset: config.offset ?? new THREE.Vector3(0, 0, 0), // Retained but unused; updated default to zero
+      rotation: config.rotation ?? new THREE.Euler(0, 0, 0), // Retained but unused; updated default to no rotation
       updateInterval: config.updateInterval ?? 100, // Update every 100ms
       playerRadius: config.playerRadius ?? 0.00005, // Small size by default
       playerColor: config.playerColor ?? 0xff0000, // Red by default
@@ -68,12 +68,6 @@ export class PlayerVisualizer {
 
     // Set up area limits (bounds)
     this.cityBounds = this.config.boundingBox || new THREE.Box3().setFromObject(this.cityMesh);
-
-    // Make bounds bigger if needed
-    if (!this.config.boundingBox && this.config.boundsExpansion !== undefined && this.config.boundsExpansion !== 1.0) {
-      this.cityBounds.expandByScalar(this.config.boundsExpansion!);
-      console.log(`Bounds expanded by ${this.config.boundsExpansion}.`);
-    }
 
     // Log bounds for debugging if enabled
     if (this.config.debugMode) {
@@ -111,19 +105,17 @@ export class PlayerVisualizer {
     console.log('Debug boundary box shown (green lines).');
   }
 
-  // Convert GMod positions to 3D scene positions (scale, shift, rotate)
+  // Convert GMod positions to 3D scene positions using fitted affine transformation
   private mapCoordinates(gmodPos: THREE.Vector3): THREE.Vector3 {
-    const mapped = gmodPos.clone().multiplyScalar(this.config.scaleFactor);
-    mapped.add(this.config.offset);
-    mapped.applyEuler(this.config.rotation);
-
-    // Correct axis inversions:
-    mapped.x = -mapped.x;  // Fix left/right mirror
-    mapped.z = -mapped.z;  // Fix forward/back mirror
-    mapped.y = -mapped.y;  // This was causing vertical inversion
-
-    return mapped;
-}
+    // Fitted matrix A and vector b from least-squares on reference points
+    const A = new THREE.Matrix3().set(
+      0.00646297824, -0.000079977569, 0.000127492645,
+      0.00000378432681, 0.0000487270525, 0.00630588861,
+      0.000169270224, -0.00659015663, 0.000106918946
+    );
+    const b = new THREE.Vector3(0.73352882, 68.92531057, 8.32454724);
+    return gmodPos.clone().applyMatrix3(A).add(b);
+  }
 
   // Fake test data for setup
   private getMockData(): PlayerData[] {
