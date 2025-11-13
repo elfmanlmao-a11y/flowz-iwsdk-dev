@@ -55,6 +55,9 @@ In Garry's Mod:
 - Type `!flows_toggle` in chat to enable/disable tracking
 - Set `developer 1` in console to see debug messages
 
+https://drive.google.com/file/d/1TJZ-u0SG3AsUgJIfn2viOdYPzllJggFT/view?usp=drive_link Summoners rift
+https://drive.google.com/file/d/1_ElBnk0GyKlKhpNgkcJlqu9cxGTW5lCU/view?usp=drive_link BigCity
+
 ## License
 
 MIT
