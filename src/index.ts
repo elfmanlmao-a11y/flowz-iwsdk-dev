@@ -66,8 +66,8 @@ const mapConfigs: Record<string, MapConfig> = {
   },
   summonersRift: {
     meshKey: 'summonersRift',
-    position: new THREE.Vector3(0, -2.3, -2), // Same position as BigCity; adjust if needed
-    scale: 0.2, // Adjust scale based on Summoner's Rift model dimensions
+    position: new THREE.Vector3(0, -1.75, -2), // Same position as BigCity; adjust if needed
+    scale: 0.15, // Adjust scale based on Summoner's Rift model dimensions
     boundingBox: new THREE.Box3(
       new THREE.Vector3(-15, 17.3, -15), // Sample bounds; measure your GLTF for accuracy (e.g., Summoner's Rift is ~10k x 10k units)
       new THREE.Vector3(15, 19, 15)

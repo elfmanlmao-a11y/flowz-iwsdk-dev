@@ -19,6 +19,7 @@
   "devDependencies": {
     "@iwsdk/vite-plugin-gltf-optimizer": "0.1.0",
     "@iwsdk/vite-plugin-iwer": "0.1.0",
+    "@iwsdk/vite-plugin-metaspatial": "^0.2.0",
     "@iwsdk/vite-plugin-uikitml": "0.1.0",
     "@types/three": "^0.178.1",
     "typescript": "^5.5.0",
