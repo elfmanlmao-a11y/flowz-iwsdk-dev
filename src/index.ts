@@ -1,7 +1,6 @@
-// Import necessary libraries and components
-import * as THREE from 'three'; // For 3D math like positions and rotations
+// src/index.ts
+import * as THREE from 'three';
 
-// Core SDK imports for building the VR world
 import {
   AssetManifest,
   AssetType,
@@ -14,39 +13,34 @@ import {
   World,
 } from "@iwsdk/core";
 
-// Additional SDK components for interactions and audio
 import {
   AudioSource,
   DistanceGrabbable,
   MovementMode,
   Interactable,
-  PanelUI,
-  PlaybackMode,
+  PlaybackMode,        // ← Fixed: was missing here
   ScreenSpace,
 } from "@iwsdk/core";
 
-// Environment and locomotion components
 import { EnvironmentType, LocomotionEnvironment } from "@iwsdk/core";
 
-// Custom systems and visualizers
+// Custom systems & visualizers
+import { MapRotationSystem, Rotation } from "./mapRotation";
 import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
-import { PlayerVisualizer } from "./playerVisualizer/playerVisualizer.js";
-
-// Define the assets to load (like sounds, textures, and 3D models)
-// MODIFIED: Added summonersRift asset
+import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
+// === ASSETS ===
 const assets: AssetManifest = {
   chimeSound: { url: "/audio/chime.mp3", type: AssetType.Audio, priority: "background" },
   webxr: { url: "/textures/webxr.png", type: AssetType.Texture, priority: "critical" },
   environmentDesk: { url: "/gltf/environmentDesk/environmentDesk.gltf", type: AssetType.GLTF, priority: "critical" },
   plantSansevieria: { url: "/gltf/plantSansevieria/plantSansevieria.gltf", type: AssetType.GLTF, priority: "critical" },
   bigCity: { url: "/gltf/BigCity/BigcityV1.glb", type: AssetType.GLTF, priority: "critical" },
-  // NEW: Summoner's Rift map asset (adjust URL if file path differs)
   summonersRift: { url: "/gltf/SummonersRift/SUMMONERSRIFT.glb", type: AssetType.GLTF, priority: "critical" },
   robot: { url: "/gltf/robot/robot.gltf", type: AssetType.GLTF, priority: "critical" },
 };
 
-// NEW: Define map configurations (meshes, positions, scales, and bounding boxes)
+// === MAP CONFIGS ===
 interface MapConfig {
   meshKey: string;
   position: THREE.Vector3;
@@ -62,112 +56,98 @@ const mapConfigs: Record<string, MapConfig> = {
     boundingBox: new THREE.Box3(
       new THREE.Vector3(-85, -2, -75),
       new THREE.Vector3(85, 100, 95)
-    ).expandByScalar(2), // Expanded for safety
+    ).expandByScalar(2),
   },
   summonersRift: {
     meshKey: 'summonersRift',
-    position: new THREE.Vector3(0, -1.75, -2), // Same position as BigCity; adjust if needed
-    scale: 0.15, // Adjust scale based on Summoner's Rift model dimensions
+    position: new THREE.Vector3(0, -1.75, -2),
+    scale: 0.15,
     boundingBox: new THREE.Box3(
-      new THREE.Vector3(-15, 17.3, -15), // Sample bounds; measure your GLTF for accuracy
+      new THREE.Vector3(-15, 17.3, -15),
       new THREE.Vector3(15, 19, 15)
     ).expandByScalar(2),
   },
 };
 
-let currentMap: string = 'bigCity'; // NEW: Track active map
-let currentVisualizer: PlayerVisualizer | null = null; // NEW: Track visualizer for toggling
+let currentMap: string = 'bigCity';
+let currentVisualizer: PlayerVisualizer | null = null;
 
-// Create the VR world and set it up
 World.create(document.getElementById("scene-container") as HTMLDivElement, {
   assets,
   xr: {
     sessionMode: SessionMode.ImmersiveVR,
     offer: "always",
-    features: { handTracking: true, layers: true }, // Enable hand tracking and layers
+    features: { handTracking: true, layers: true },
   },
   features: {
-    locomotion: { useWorker: true }, // Smooth movement
-    grabbing: true, // Allow grabbing objects
-    physics: false, // No physics simulation
-    sceneUnderstanding: false, // No AI scene analysis
+    locomotion: { useWorker: true },
+    grabbing: true,
+    physics: false,
+    sceneUnderstanding: false,
   },
 }).then((world) => {
-  // Set up the camera (user's viewpoint)
+  // Register rotation system early
+  world.registerSystem(MapRotationSystem);
+
+
   const { camera } = world;
-  camera.position.set(-4, 1.5, -6); // Position the camera
-  camera.rotateY(-Math.PI * 0.75); // Rotate it slightly
+  camera.position.set(-4, 1.5, -6);
+  camera.rotateY(-Math.PI * 0.75);
 
-  // Add the desk environment
+  // Desk
   const { scene: deskMesh } = AssetManager.getGLTF("environmentDesk")!;
-  deskMesh.rotateY(Math.PI); // Rotate to face correctly
-  deskMesh.position.set(0, -0.1, 0); // Place it on the floor
+  deskMesh.rotateY(Math.PI);
+  deskMesh.position.set(0, -0.1, 0);
   world.createTransformEntity(deskMesh)
-    .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC }); // Make it walkable
+    .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
 
-  // NEW: Load and prepare both map meshes
+  // Load maps
   const bigCityMesh = AssetManager.getGLTF("bigCity")!.scene;
   const summonersRiftMesh = AssetManager.getGLTF("summonersRift")!.scene;
 
-  // Apply initial transforms to BigCity (hidden for Summoner's Rift)
+  // BigCity
   bigCityMesh.position.copy(mapConfigs.bigCity.position);
   bigCityMesh.scale.setScalar(mapConfigs.bigCity.scale);
-  bigCityMesh.updateMatrix();
   bigCityMesh.updateMatrixWorld(true);
-  const bigCityEntity = world.createTransformEntity(bigCityMesh)
+  world.createTransformEntity(bigCityMesh)
     .addComponent(Interactable)
-    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
+    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget })
+    .addComponent(Rotation, { speed: 0.05, axis: "Y" });
 
-  // Apply transforms to Summoner's Rift (initially hidden)
+  // Summoner's Rift (hidden)
   summonersRiftMesh.position.copy(mapConfigs.summonersRift.position);
   summonersRiftMesh.scale.setScalar(mapConfigs.summonersRift.scale);
-  summonersRiftMesh.updateMatrix();
   summonersRiftMesh.updateMatrixWorld(true);
-  const summonersRiftEntity = world.createTransformEntity(summonersRiftMesh)
+  world.createTransformEntity(summonersRiftMesh)
     .addComponent(Interactable)
-    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
-  summonersRiftMesh.visible = false; // NEW: Hide initially
+    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget })
+    .addComponent(Rotation, { speed: 0.05, axis: "Y" });
+  summonersRiftMesh.visible = false;
 
-  // MODIFIED: Initialize PlayerVisualizer with corrected trail & scale config
-  const initialConfig = mapConfigs.bigCity;
+  // Player Visualizer – attached to world root
   currentVisualizer = new PlayerVisualizer(world, bigCityMesh, {
     useMock: false,
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
-    playerRadius: 1,           // Visible player size
+    playerRadius: 1,
     debugMode: true,
     showBounds: true,
-    boundingBox: initialConfig.boundingBox,
-    // Enable & tune trails
+    boundingBox: mapConfigs.bigCity.boundingBox,
     trailEnabled: true,
     trailLength: 40,
-    trailWidth: 0.4,           // Visible ribbon
+    trailWidth: 0.4,
     trailOpacity: 0.9,
+    labelFontSize: .1,     
   });
-// Continuous slow rotation system for the active map (ECS-friendly)
-class MapRotationSystem {
-  execute(delta: number) {
-    if (bigCityMesh.visible) {
-      bigCityMesh.rotation.y += delta * 0.05;     // slow spin (positive = clockwise)
-    }
-    if (summonersRiftMesh.visible) {
-      summonersRiftMesh.rotation.y += delta * 0.05;
-    }
-  }
-}
-  // NEW: Toggle function for switching maps
+
   const toggleMap = () => {
     const nextMap = currentMap === 'bigCity' ? 'summonersRift' : 'bigCity';
     const nextConfig = mapConfigs[nextMap];
     const nextMesh = nextMap === 'bigCity' ? bigCityMesh : summonersRiftMesh;
 
-    // Swap visibility
     bigCityMesh.visible = nextMap === 'bigCity';
     summonersRiftMesh.visible = nextMap === 'summonersRift';
 
-    // Destroy and recreate visualizer
-    if (currentVisualizer) {
-      currentVisualizer.destroy();
-    }
+    currentVisualizer?.destroy();
     currentVisualizer = new PlayerVisualizer(world, nextMesh, {
       useMock: false,
       dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
@@ -179,72 +159,54 @@ class MapRotationSystem {
       trailLength: 40,
       trailWidth: 0.4,
       trailOpacity: 0.9,
+      labelFontSize: .8,
     });
 
     currentMap = nextMap;
-    console.log(`Switched to ${nextMap} map`);
+    console.log(`Switched to ${nextMap}`);
   };
 
-  // NEW: Keyboard toggle (press 'M' for Map)
-  window.addEventListener('keydown', (event) => {
-    if (event.key.toLowerCase() === 'm') {
-      toggleMap();
-    }
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm') toggleMap();
   });
 
-  // OPTIONAL: VR-friendly toggle via PanelUI (uncomment to enable)
-  /*
-  const panelEntity = world
-    .createTransformEntity()
-    .addComponent(PanelUI, { 
-      config: "/ui/mapToggle.json", // Create this JSON with a button that calls toggleMap()
-      maxHeight: 0.5, 
-      maxWidth: 1.0 
-    })
-    .addComponent(Interactable)
-    .addComponent(ScreenSpace, { top: "20px", left: "20px", height: "30%" });
-  panelEntity.object3D!.position.set(0, 1.5, -2);
-  */
-
-  // Add a plant model
+  // Plant
   const { scene: plantMesh } = AssetManager.getGLTF("plantSansevieria")!;
-  plantMesh.position.set(1.2, 0.85, -1.8); // Place it on the desk
+  plantMesh.position.set(1.2, 0.85, -1.8);
   world.createTransformEntity(plantMesh)
     .addComponent(Interactable)
     .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
 
-  // Add a robot model
+  // Robot
   const { scene: robotMesh } = AssetManager.getGLTF("robot")!;
-  robotMesh.position.set(-1.2, 0.95, -1.8); // Place it on the desk
-  robotMesh.scale.setScalar(0.5); // Make it half size
+  robotMesh.position.set(-1.2, 0.95, -1.8);
+  robotMesh.scale.setScalar(0.5);
   world.createTransformEntity(robotMesh)
     .addComponent(Interactable)
-    .addComponent(Robot) // Custom robot behavior
+    .addComponent(Robot)
     .addComponent(AudioSource, {
-      src: "/audio/chime.mp3", // Sound file
-      maxInstances: 3, // Up to 3 sounds at once
-      playbackMode: PlaybackMode.FadeRestart, // Fade when restarting
+      src: "/audio/chime.mp3",
+      maxInstances: 3,
+      playbackMode: PlaybackMode.FadeRestart,
     });
 
-  // Add a logo banner
+  // Logo
   const webxrLogoTexture = AssetManager.getTexture("webxr")!;
-  webxrLogoTexture.colorSpace = SRGBColorSpace; // Correct color display
+  webxrLogoTexture.colorSpace = SRGBColorSpace;
   const logoBanner = new Mesh(
-    new PlaneGeometry(3.39, 0.96), // Flat rectangle
-    new MeshBasicMaterial({ map: webxrLogoTexture, transparent: true }) // With texture
+    new PlaneGeometry(3.39, 0.96),
+    new MeshBasicMaterial({ map: webxrLogoTexture, transparent: true })
   );
   world.createTransformEntity(logoBanner);
-  logoBanner.position.set(0, 1, 1.8); // Place it in view
-  logoBanner.rotateY(Math.PI); // Flip it around
+  logoBanner.position.set(0, 1, 1.8);
+  logoBanner.rotateY(Math.PI);
 
+  // Register remaining systems
+  world
+    .registerSystem(PanelSystem)
+    .registerSystem(RobotSystem);
 
-
-  // Start custom systems
-  world.registerSystem(PanelSystem).registerSystem(RobotSystem);
-  // Clean up when page closes
   window.addEventListener('beforeunload', () => {
-    if (currentVisualizer) {
-      currentVisualizer.destroy(); // Stop player updates
-    }
+    currentVisualizer?.destroy();
   });
 });

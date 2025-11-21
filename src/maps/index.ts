@@ -1,5 +1,5 @@
-import BigCityMap from "./bigCityMap";
-import SummonersRiftMap from "./summonersRiftMap";
+import BigCityMap from "./BigCityMap";
+import SummonersRiftMap from "./SummonersRiftMap";
 
 export const allMaps = {
   bigCity: BigCityMap,
