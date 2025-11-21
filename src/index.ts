@@ -31,7 +31,7 @@ import { EnvironmentType, LocomotionEnvironment } from "@iwsdk/core";
 // Custom systems and visualizers
 import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
-import { PlayerVisualizer } from "./playerVisualizer";
+import { PlayerVisualizer } from "./playerVisualizer/playerVisualizer.js";
 
 // Define the assets to load (like sounds, textures, and 3D models)
 // MODIFIED: Added summonersRift asset
@@ -62,16 +62,16 @@ const mapConfigs: Record<string, MapConfig> = {
     boundingBox: new THREE.Box3(
       new THREE.Vector3(-85, -2, -75),
       new THREE.Vector3(85, 100, 95)
-    ),
+    ).expandByScalar(2), // Expanded for safety
   },
   summonersRift: {
     meshKey: 'summonersRift',
     position: new THREE.Vector3(0, -1.75, -2), // Same position as BigCity; adjust if needed
     scale: 0.15, // Adjust scale based on Summoner's Rift model dimensions
     boundingBox: new THREE.Box3(
-      new THREE.Vector3(-15, 17.3, -15), // Sample bounds; measure your GLTF for accuracy (e.g., Summoner's Rift is ~10k x 10k units)
+      new THREE.Vector3(-15, 17.3, -15), // Sample bounds; measure your GLTF for accuracy
       new THREE.Vector3(15, 19, 15)
-    ),
+    ).expandByScalar(2),
   },
 };
 
@@ -128,17 +128,32 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
   summonersRiftMesh.visible = false; // NEW: Hide initially
 
-  // MODIFIED: Initialize PlayerVisualizer with initial map config
+  // MODIFIED: Initialize PlayerVisualizer with corrected trail & scale config
   const initialConfig = mapConfigs.bigCity;
   currentVisualizer = new PlayerVisualizer(world, bigCityMesh, {
     useMock: false,
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
-    playerRadius: 2,
+    playerRadius: 1,           // Visible player size
     debugMode: true,
     showBounds: true,
     boundingBox: initialConfig.boundingBox,
+    // Enable & tune trails
+    trailEnabled: true,
+    trailLength: 40,
+    trailWidth: 0.4,           // Visible ribbon
+    trailOpacity: 0.9,
   });
-
+// Continuous slow rotation system for the active map (ECS-friendly)
+class MapRotationSystem {
+  execute(delta: number) {
+    if (bigCityMesh.visible) {
+      bigCityMesh.rotation.y += delta * 0.05;     // slow spin (positive = clockwise)
+    }
+    if (summonersRiftMesh.visible) {
+      summonersRiftMesh.rotation.y += delta * 0.05;
+    }
+  }
+}
   // NEW: Toggle function for switching maps
   const toggleMap = () => {
     const nextMap = currentMap === 'bigCity' ? 'summonersRift' : 'bigCity';
@@ -156,14 +171,18 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     currentVisualizer = new PlayerVisualizer(world, nextMesh, {
       useMock: false,
       dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
-      playerRadius: 2,
+      playerRadius: 1,
       debugMode: true,
       showBounds: true,
       boundingBox: nextConfig.boundingBox,
+      trailEnabled: true,
+      trailLength: 40,
+      trailWidth: 0.4,
+      trailOpacity: 0.9,
     });
 
     currentMap = nextMap;
-    console.log(`Switched to ${nextMap} map`); // Debug log
+    console.log(`Switched to ${nextMap} map`);
   };
 
   // NEW: Keyboard toggle (press 'M' for Map)
@@ -218,9 +237,10 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   logoBanner.position.set(0, 1, 1.8); // Place it in view
   logoBanner.rotateY(Math.PI); // Flip it around
 
+
+
   // Start custom systems
   world.registerSystem(PanelSystem).registerSystem(RobotSystem);
-
   // Clean up when page closes
   window.addEventListener('beforeunload', () => {
     if (currentVisualizer) {
