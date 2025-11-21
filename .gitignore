@@ -52,6 +52,11 @@ coverage/
 *.sln
 *.sw?
 
+# PDFs and docs
+*.pdf
+Flowz Pre-Seed Overview.pdf
+docs/
+
 # Local SSL certificates (auto-generated)
 .cert/
 

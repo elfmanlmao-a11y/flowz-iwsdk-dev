@@ -30,14 +30,15 @@ import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
 // === ASSETS ===
+// === ASSETS — GitHub Pages Subdirectory Paths ===
 const assets: AssetManifest = {
-  chimeSound: { url: "/audio/chime.mp3", type: AssetType.Audio, priority: "background" },
-  webxr: { url: "/textures/webxr.png", type: AssetType.Texture, priority: "critical" },
-  environmentDesk: { url: "/gltf/environmentDesk/environmentDesk.gltf", type: AssetType.GLTF, priority: "critical" },
-  plantSansevieria: { url: "/gltf/plantSansevieria/plantSansevieria.gltf", type: AssetType.GLTF, priority: "critical" },
-  bigCity: { url: "/gltf/BigCity/BigcityV1.glb", type: AssetType.GLTF, priority: "critical" },
-  summonersRift: { url: "/gltf/SummonersRift/SUMMONERSRIFT.glb", type: AssetType.GLTF, priority: "critical" },
-  robot: { url: "/gltf/robot/robot.gltf", type: AssetType.GLTF, priority: "critical" },
+  chimeSound: { url: "/flowz-iwsdk-dev/audio/chime.mp3", type: AssetType.Audio, priority: "background" },
+  webxr: { url: "/flowz-iwsdk-dev/textures/webxr.png", type: AssetType.Texture, priority: "critical" },
+  environmentDesk: { url: "/flowz-iwsdk-dev/gltf/environmentDesk/environmentDesk.gltf", type: AssetType.GLTF, priority: "critical" },
+  plantSansevieria: { url: "/flowz-iwsdk-dev/gltf/plantSansevieria/plantSansevieria.gltf", type: AssetType.GLTF, priority: "critical" },
+  bigCity: { url: "/flowz-iwsdk-dev/gltf/BigCity/BigcityV1.glb", type: AssetType.GLTF, priority: "critical" },
+  summonersRift: { url: "/flowz-iwsdk-dev/gltf/SummonersRift/SUMMONERSRIFT.glb", type: AssetType.GLTF, priority: "critical" },
+  robot: { url: "/flowz-iwsdk-dev/gltf/robot/robot.gltf", type: AssetType.GLTF, priority: "critical" },
 };
 
 // === MAP CONFIGS ===
