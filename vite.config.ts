@@ -5,12 +5,9 @@ import { defineConfig } from "vite";
 import mkcert from "vite-plugin-mkcert";
 
 export default defineConfig(({ mode }) => ({
-  base: "/flowz-iwsdk-dev/",  // Ensures relative paths for GitHub Pages
-
+  base: "/", // USE "/" for Render static hosting. Use "/flowz-iwsdk-dev/" ONLY for GitHub Pages.
   plugins: [
     mkcert(),
-    
-    // Conditionally enable IWSDK plugins only in development
     ...(mode === "development"
       ? [
           injectIWER({
@@ -20,37 +17,29 @@ export default defineConfig(({ mode }) => ({
           }),
         ]
       : []),
-
     compileUIKit({ sourceDir: "ui", outputDir: "public/ui", verbose: true }),
-    optimizeGLTF({
-      level: "medium",
-    }),
+    optimizeGLTF({ level: "medium" }),
   ],
-
-  server: { 
-    host: "0.0.0.0", 
-    port: 8081, 
-    open: true 
+  server: {
+    host: "0.0.0.0",
+    port: 8081,
+    open: true,
   },
-
   build: {
     outDir: "dist",
-    sourcemap: mode !== "production",  // Disable in production for smaller files
+    sourcemap: mode !== "production",
     target: "esnext",
-    rollupOptions: { 
+    rollupOptions: {
       input: "./index.html",
       output: {
-        // Bundle IWSDK and Three.js for better caching
         manualChunks: {
           iwsdk: ["@iwsdk/core"],
           three: ["three"],
         },
       },
     },
-    // Ensure all assets are copied correctly
-    assetsInlineLimit: 0,  // Prevent inlining for GLTF/JSON files
+    assetsInlineLimit: 0, // Ensures all assets are emitted to dist
   },
-
   esbuild: { target: "esnext" },
   optimizeDeps: {
     exclude: ["@babylonjs/havok"],
