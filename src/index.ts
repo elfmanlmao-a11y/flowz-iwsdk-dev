@@ -29,6 +29,7 @@ import { MapRotationSystem, Rotation } from "./mapRotation";
 import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
+import { KeyboardMovementSystem } from './keyboardMovement';
 // === ASSETS ===
 // === ASSETS — GitHub Pages Subdirectory Paths ===
 const assets: AssetManifest = {
@@ -205,6 +206,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   world
     .registerSystem(PanelSystem)
     .registerSystem(RobotSystem);
+    
+  // Desktop keyboard movement (WASD + Space/Shift)
+  world.registerSystem(KeyboardMovementSystem);
 
   window.addEventListener('beforeunload', () => {
     currentVisualizer?.destroy();
