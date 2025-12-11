@@ -71,6 +71,8 @@ app.get('/riot/summonerByName', async (req, res) => {
     const { platform = 'NA1', summonerName } = req.query;
     if (!summonerName) return res.status(400).json({ error: 'Missing summonerName query parameter' });
 
+    console.log(`/riot/summonerByName request - platform=${platform} summonerName=${summonerName}`);
+
     const host = platformToHost(platform);
     const url = `https://${host}/lol/summoner/v4/summoners/by-name/${encodeURIComponent(summonerName)}`;
     const r = await fetch(url, { headers: { 'X-Riot-Token': apiKey } });
@@ -89,6 +91,8 @@ app.get('/riot/activeGame', async (req, res) => {
 
     const { platform = 'NA1', summonerId, summonerName } = req.query;
     if (!summonerId && !summonerName) return res.status(400).json({ error: 'Provide summonerId or summonerName' });
+
+    console.log(`/riot/activeGame request - platform=${platform} summonerId=${summonerId} summonerName=${summonerName}`);
 
     const host = platformToHost(platform);
     let targetId = summonerId;
@@ -118,6 +122,11 @@ app.get('/riot/activeGame', async (req, res) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', players: players.size });
+});
+
+// Simple ping to verify Riot routes are deployed
+app.get('/riot/ping', (req, res) => {
+  res.status(200).json({ ok: true, routes: ['/riot/summonerByName', '/riot/activeGame'] });
 });
 
 // Start server
