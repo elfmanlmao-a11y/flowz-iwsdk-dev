@@ -1,0 +1,5 @@
+git+https://github.com/league-of-legends-replay-extractor/pyLoL.git
+opencv-python  # For CV features
+numpy
+tqdm
+jupyter  # Optional, for pyLoL's .ipynb testing
