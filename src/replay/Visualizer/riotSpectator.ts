@@ -1,4 +1,4 @@
-import { RiotPlatform, RiotSpectatorParticipant, RiotCurrentGameInfo, RiotSummoner } from './riotTypes';
+import { RiotPlatform, RiotSpectatorParticipant, RiotCurrentGameInfo, RiotSummoner, RiotMatch, RiotMatchParticipant } from './riotTypes';
 
 function platformToHost(platform: RiotPlatform): string {
   return `${platform.toLowerCase()}.api.riotgames.com`;
@@ -60,3 +60,15 @@ export function parseCurrentGameToVisualizerPlayers(game: RiotCurrentGameInfo): 
     bot: !!p.bot,
   }));
 }
+
+export function parseMatchToVisualizerPlayers(match: RiotMatch): VisualizerPlayer[] {
+  return match.info.participants.map((p: RiotMatchParticipant) => ({
+    id: p.puuid,
+    name: p.summonerName,
+    championId: p.championId,
+    teamId: p.teamId,
+    spells: [], // Match data doesn't include spells; could add from static data if needed
+    bot: false,
+  }));
+}
+

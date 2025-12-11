@@ -30,3 +30,47 @@ export interface RiotCurrentGameInfo {
   gameQueueConfigId?: number;
   participants: RiotSpectatorParticipant[];
 }
+
+// Match v5 API types
+export interface RiotMatchMetadata {
+  dataVersion: string;
+  matchId: string;
+  participants: string[]; // array of PUUIDs
+}
+
+export interface RiotMatchParticipant {
+  puuid: string;
+  summonerId?: string;
+  summonerName: string;
+  championId: number;
+  championName?: string;
+  teamId: number;
+  kills: number;
+  deaths: number;
+  assists: number;
+  goldEarned?: number;
+  win?: boolean;
+}
+
+export interface RiotMatchInfo {
+  endOfGameResult: string;
+  gameCreation: number;
+  gameDuration: number;
+  gameEndTimestamp: number;
+  gameId: number;
+  gameMode: string;
+  gameName: string;
+  gameStartTimestamp: number;
+  gameType: string;
+  gameVersion: string;
+  mapId: number;
+  participants: RiotMatchParticipant[];
+  platformId: string;
+  queueId?: number;
+  tournamentCode?: string;
+}
+
+export interface RiotMatch {
+  metadata: RiotMatchMetadata;
+  info: RiotMatchInfo;
+}
