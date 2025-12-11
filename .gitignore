@@ -64,3 +64,6 @@ docs/
 public/gltf/generated/
 public/glxf/
 public/ui/
+
+# Riot integration doc (may contain notes you don't want committed)
+src/replay/Visualizer/RIOT_INTEGRATION.md

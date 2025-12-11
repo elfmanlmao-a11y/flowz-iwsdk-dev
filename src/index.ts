@@ -29,6 +29,7 @@ import { MapRotationSystem, Rotation } from "./mapRotation";
 import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
+import { parseCurrentGameToVisualizerPlayers } from './replay/Visualizer/riotSpectator';
 import { KeyboardMovementSystem } from './keyboardMovement';
 // === ASSETS ===
 const assets: AssetManifest = {
@@ -139,6 +140,53 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     trailOpacity: 0.9,
     labelFontSize: .1,     
   });
+
+  // Attempt to load a Riot active game if the user provides a summoner name
+  async function tryLoadRiotMatchForSummoner(summonerName?: string) {
+    if (!summonerName) return;
+    const serverBase = 'https://flowz-iwsdk-dev.onrender.com';
+    try {
+      const res = await fetch(`${serverBase}/riot/activeGame?platform=NA1&summonerName=${encodeURIComponent(summonerName)}`);
+      if (!res.ok) {
+        console.warn('No active Riot game or fetch failed:', await res.text());
+        return;
+      }
+      const riotGame = await res.json();
+      const players = parseCurrentGameToVisualizerPlayers(riotGame);
+
+      // Switch to Summoner's Rift map and create visualizer there
+      bigCityMesh.visible = false;
+      summonersRiftMesh.visible = true;
+
+      currentVisualizer?.destroy();
+      currentVisualizer = new PlayerVisualizer(world, summonersRiftMesh, {
+        useMock: false,
+        dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
+        playerRadius: 1,
+        debugMode: true,
+        showBounds: true,
+        boundingBox: mapConfigs.summonersRift.boundingBox,
+        trailEnabled: true,
+        trailLength: 40,
+        trailWidth: 0.4,
+        trailOpacity: 0.9,
+        labelFontSize: .8,
+      });
+
+      // Pass Riot players to visualizer
+      currentVisualizer.updateFromSpectatorPlayers(players as any);
+      currentMap = 'summonersRift';
+      console.log('Loaded Riot match and spawned players on Summoner\'s Rift');
+    } catch (err) {
+      console.error('Error loading Riot match:', err);
+    }
+  }
+
+  // Prompt developer for summoner name when running locally (press Cancel to skip)
+  try {
+    const summ = window.prompt('Enter summoner name to spectate (or Cancel to skip):');
+    if (summ) tryLoadRiotMatchForSummoner(summ.trim());
+  } catch (e) { /* ignore prompt in non-browser envs */ }
 
   const toggleMap = () => {
     const nextMap = currentMap === 'bigCity' ? 'summonersRift' : 'bigCity';

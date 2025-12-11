@@ -143,6 +143,65 @@ export class PlayerVisualizer {
     });
   }
 
+  // Accept players converted from Riot spectator data and place them on the map
+  async updateFromSpectatorPlayers(players: import('../replay/Visualizer/riotSpectator').VisualizerPlayer[] | undefined) {
+    if (!players || players.length === 0) return;
+
+    const seen = new Set<string>();
+    const center = this.bounds?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3();
+    const size = this.bounds?.getSize(new THREE.Vector3()) ?? new THREE.Vector3(100, 0, 100);
+
+    // Group players by team so we can place teams on opposite sides
+    const teams = new Map<number, typeof players>();
+    for (const p of players) {
+      const arr = teams.get(p.teamId) || [];
+      arr.push(p);
+      teams.set(p.teamId, arr);
+    }
+
+    for (const [teamId, list] of teams) {
+      const isBlue = teamId === 100; // common Riot team id convention
+      const baseX = center.x + (isBlue ? -size.x * 0.25 : size.x * 0.25);
+      const spacing = Math.max(2, size.x / Math.max(4, list.length + 1));
+
+      list.forEach((p, idx) => {
+        seen.add(p.name);
+
+        let entry = this.players.get(p.name);
+        if (!entry) {
+          entry = this.playerEntity.create(p.name);
+          this.players.set(p.name, entry);
+
+          if (this.players.size === 1) {
+            this.billboarding.start(this.world, this.players);
+            console.log('Billboarding STARTED with', this.players.size, 'players');
+          }
+        }
+
+        const offsetX = baseX + (idx - (list.length - 1) / 2) * spacing;
+        const mapPos = new THREE.Vector3(offsetX, center.y, center.z + (isBlue ? -size.z * 0.15 : size.z * 0.15));
+        const worldPos = this.transformer.map(mapPos);
+
+        entry.entity.object3D.position.copy(worldPos);
+
+        const color = new THREE.Color().setHSL(((p.championId % 24) / 24), 1, 0.5);
+        this.playerEntity.updateColor(entry.mesh, color);
+
+        if (!entry.label) entry.label = this.labelRenderer.createLabel(entry.labelRoot, p.name);
+
+        // Reset trail to current position
+        entry.points = [worldPos.clone()];
+        this.playerEntity.updateTrail(entry, color);
+        this.lastPos.set(p.name, worldPos.clone());
+      });
+    }
+
+    // Remove vanished players (by name)
+    for (const [name] of this.players) {
+      if (!seen.has(name)) this.removePlayer(name);
+    }
+  }
+
   private startPolling() {
     this.updatePlayers();
     this.timer = window.setInterval(() => this.updatePlayers(), this.config.updateInterval);

@@ -56,6 +56,65 @@ app.get('/data', (req, res) => {
   }
 });
 
+// Helper: map platform to Riot host
+function platformToHost(platform) {
+  if (!platform) return 'na1.api.riotgames.com';
+  return `${platform.toLowerCase()}.api.riotgames.com`;
+}
+
+// Riot proxy endpoints - keep API key server-side (set RIOT_API_KEY in env)
+app.get('/riot/summonerByName', async (req, res) => {
+  try {
+    const apiKey = process.env.RIOT_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'RIOT_API_KEY not configured on server' });
+
+    const { platform = 'NA1', summonerName } = req.query;
+    if (!summonerName) return res.status(400).json({ error: 'Missing summonerName query parameter' });
+
+    const host = platformToHost(platform);
+    const url = `https://${host}/lol/summoner/v4/summoners/by-name/${encodeURIComponent(summonerName)}`;
+    const r = await fetch(url, { headers: { 'X-Riot-Token': apiKey } });
+    const body = await r.text();
+    res.status(r.status).type('application/json').send(body);
+  } catch (err) {
+    console.error('/riot/summonerByName error', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/riot/activeGame', async (req, res) => {
+  try {
+    const apiKey = process.env.RIOT_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'RIOT_API_KEY not configured on server' });
+
+    const { platform = 'NA1', summonerId, summonerName } = req.query;
+    if (!summonerId && !summonerName) return res.status(400).json({ error: 'Provide summonerId or summonerName' });
+
+    const host = platformToHost(platform);
+    let targetId = summonerId;
+
+    // If summonerName supplied, resolve it first
+    if (!targetId && summonerName) {
+      const urlName = `https://${host}/lol/summoner/v4/summoners/by-name/${encodeURIComponent(summonerName)}`;
+      const rName = await fetch(urlName, { headers: { 'X-Riot-Token': apiKey } });
+      if (!rName.ok) {
+        const t = await rName.text();
+        return res.status(rName.status).type('application/json').send(t);
+      }
+      const nameBody = await rName.json();
+      targetId = nameBody.id;
+    }
+
+    const url = `https://${host}/lol/spectator/v4/active-games/by-summoner/${encodeURIComponent(targetId)}`;
+    const r = await fetch(url, { headers: { 'X-Riot-Token': apiKey } });
+    const body = await r.text();
+    res.status(r.status).type('application/json').send(body);
+  } catch (err) {
+    console.error('/riot/activeGame error', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'healthy', players: players.size });
