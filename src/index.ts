@@ -31,6 +31,7 @@ import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
 import { KeyboardMovementSystem } from './keyboardMovement';
 // === ASSETS ===
+// === ASSETS — GitHub Pages Subdirectory Paths ===
 const assets: AssetManifest = {
   chimeSound: { url: "audio/chime.mp3", type: AssetType.Audio, priority: "background" },
   webxr: { url: "textures/webxr.png", type: AssetType.Texture, priority: "critical" },
