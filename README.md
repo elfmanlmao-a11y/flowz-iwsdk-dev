@@ -1,95 +1,125 @@
-# Flowz IWSDK Development
+# Flowz – Immersive World Streaming SDK (Prototype)
 
-A VR visualization tool that displays Garry's Mod player positions in a 3D city environment using Meta's Immersive Web SDK.
+Flowz is an experimental **immersive world streaming SDK** that transforms **live game telemetry** into a **spatial, holographic viewing experience** using Web technologies.
 
-## Project Structure
+Instead of watching gameplay through a flat video stream, Flowz reconstructs the live game state in **3D space**, allowing viewers to observe matches, players, and maps as **anchored holograms** in VR, AR, or desktop browsers.
 
-- `/src` - IWSDK TypeScript source code
-- `/server` - Express.js server for player data relay
-- `/gmod` - Garry's Mod Lua scripts
-- `/public` - Static assets (3D models, textures, etc.)
+This repository contains an **early MVP prototype** demonstrating the concept using **Garry's Mod**.
 
-## Prerequisites
+---
 
-- Node.js >= 20.19.0
-- Garry's Mod
-- Meta Quest headset (or other VR device)
+## What This Prototype Demonstrates
 
-## Setup
+This project proves that:
 
-1. Install dependencies:
-```bash
-npm install
-```
+* Live game telemetry (position, rotation, velocity) can be extracted from a running game
+* That data can be streamed in real time via WebSockets
+* A web-based immersive client can reconstruct the game world spatially
+* Player movement in the source game maps 1:1 to a holographic representation
+* Spectators can observe gameplay **from any angle**, at any scale
 
-2. Configure Garry's Mod:
-- Copy `gmod/Flows_ClientTracker.lua` to `garrysmod/lua/autorun/client/`
-- Add the following to `garrysmod/cfg/http.cfg`:
-```
-127.0.0.1:3000
-localhost:3000
-```
+This is **not a replay system** — it is a **live spatial mirror** of an active game session.
 
-3. Start the development server:
-```bash
-# Terminal 1 - Data relay server
-npm run server
+---
 
-# Terminal 2 - IWSDK development server
-npm run dev
-```
+## Core Idea
 
-4. Open Garry's Mod and connect to a game
+> Game data becomes more meaningful when experienced spatially rather than through flat video.
 
-5. Open https://localhost:8082 in your browser
+Flowz explores an alternative to traditional livestreaming by treating a game world as **data first**, visuals second.
+The immersive client is decoupled from the game engine and driven entirely by streamed state.
 
-## Development
+---
 
-- `npm run dev` - Start IWSDK development server
-- `npm run server` - Start data relay server
-- `npm run build` - Build for production
+## Current Scope (Intentional Limitations)
 
-## Controls
+This prototype is intentionally narrow in scope:
 
-In Garry's Mod:
-- Type `!flows_toggle` in chat to enable/disable tracking
-- Set `developer 1` in console to see debug messages
+* Supports **one game**
+* Supports **one map** (`gm_bigcity`)
+* Streams **one or more live players**
+* No UI polish
+* No social features
+* No replay indexing or discovery layer
 
-https://drive.google.com/file/d/1TJZ-u0SG3AsUgJIfn2viOdYPzllJggFT/view?usp=drive_link Summoners rift
-https://drive.google.com/file/d/1_ElBnk0GyKlKhpNgkcJlqu9cxGTW5lCU/view?usp=drive_link BigCity
+The goal is **clarity of concept**, not feature completeness.
 
-## License
+---
 
-MIT
+## Architecture Overview
 
-## Development status & next steps
+**1. Game-side telemetry script**
 
-Current codebase snapshot
-- Client: `src/` contains the IWSDK app, `src/Visualizer/PlayerVisualizer.ts` handles in-scene player entities, and `src/index.ts` is the main app + UI scaffolding. The repository includes map assets (BigCity, Summoner's Rift) and helper systems (billboarding, trails, labels).
-- Server: `server/server.js` is a small Express relay used for Garry's Mod player data and has been extended in development to accept replay uploads and to proxy Riot API requests.
+* Runs inside the Garry’s Mod client or server
+* Collects per-player:
 
-What we attempted (and what failed)
-- Riot Spectator API integration: I implemented a client and a server-side proxy so the Riot API key remains secret and requests can be proxied from the client. Testing revealed persistent 403 responses from Riot due to API key expiration/permission issues and regional routing complexities. Live spectating via Riot's spectator endpoints was not completed. Spectator v5 calls will return 403 or 404 in many cases.
-- Match v5 approach: I added code to query match history and match details and UI to select a match to visualize. This path is preferable to live spectating for replaying past matches, but it relies on Developer Riot API credentials and regional routing (americas/europe/asia mapping), which also need verification and a valid key.
-- Replay parsing: Initially tested a simple client-side ASCII substring extraction to detect player names from `.rofl` files — this is unreliable. Parsing League replay files properly requires a dedicated parser (open-source options exist such as `pyLoL` or `LeagueReplayParser`).
+  * Position (XYZ)
+  * Rotation (roll / pitch / yaw)
+  * Velocity
+* Sends updates over a WebSocket connection
 
-Current pivot and plan
-- Pivot: focus on a reliable replay-based workflow where users upload a `.rofl` file and the server runs a proper parser to produce structured JSON that the client will visualize. This avoids live spectator fragility and keeps replay parsing server-side where proper tools and Python/C# runtimes can be installed.
+**2. WebSocket relay**
 
-Short-term next steps (practical)
-1. Implement server-side replay parser integration
-	- Install a parser (recommended: `pyLoL` for Python or `LeagueReplayParser` for C#) on the server or build container image that includes it.
-	- Provide a small wrapper script (e.g. `parse_replay.py`) that accepts a replay file path and writes JSON to stdout. Set `REPLAY_PARSER_CMD` to that command on the server.
-2. Add/complete the client upload UI
-	- Upload `.rofl` (<= ~100KB) to `server/upload/rolf` as base64 or multipart form-data; server runs parser and returns structured JSON suitable for `PlayerVisualizer.updateFromSpectatorPlayers()`.
-3. Rotate Riot API key and secure it
-	- Generate a new Riot API key in the Riot Developer Portal and set it in Render as `RIOT_API_KEY`. Redeploy the server and verify `/riot/ping` and other proxy routes respond.
-4. Validate visualization flow locally
-	- Upload a sample `.rofl` via the UI; confirm parsed JSON, map placements, and player spawning on Summoner's Rift.
-5. Improve UX and safety
-	- Add UI to edit parsed name list before spawning, show parser logs, and add tests and sample replays to `tests/`.
+* Transmits live world state data
+* Designed to be game-agnostic
 
-- Replay parsers may require additional native dependencies; follow the parser's installation guide and prefer running them on the server-side build/deploy pipeline rather than in-browser.
+**3. Immersive Web Client**
 
+* Connects to the WebSocket
+* Parses incoming telemetry
+* Renders a 3D representation of the map
+* Updates player entities in real time
 
-— End of update
+The immersive client has **no direct dependency on the source game engine**.
+
+---
+
+## Why This Matters
+
+Traditional game spectating is limited by:
+
+* Fixed camera perspectives
+* Compression artifacts
+* Lack of spatial context
+
+Flowz enables:
+
+* Free-form observation
+* True spatial understanding of movement and positioning
+* New ways to analyze performance, routes, and tactics
+* Viewing experiences designed specifically for VR / AR / Mixed Reality
+
+---
+
+## Intended Future Direction (Conceptual)
+
+This prototype is a foundation for a broader vision:
+
+* Multi-game telemetry adapters
+* Replay and timeline scrubbing
+* Competitive esports visualization
+* Track, arena, and map holograms anchored to real-world surfaces
+* WebXR-first immersive viewing experiences
+
+These features are **out of scope for this repository**.
+
+---
+
+## Status
+
+* Experimental
+* Early-stage MVP
+* Actively used to explore immersive spectator design
+
+This repository should be evaluated as:
+
+> a proof of concept for **spatial game state streaming**, not a finished product.
+
+---
+
+## Disclaimer
+
+This project is not affiliated with or endorsed by Facepunch Studios or Garry’s Mod.
+All assets and references are used for experimental and educational purposes.
+
+---
