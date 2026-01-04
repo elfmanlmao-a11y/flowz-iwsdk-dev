@@ -1,4 +1,5 @@
 # Flowz – Immersive World Streaming SDK (Prototype)
+Experimental WebXR prototype exploring spatial spectating via live game telemetry.
 
 Flowz is an experimental **immersive world streaming SDK** that transforms **live game telemetry** into a **spatial, holographic viewing experience** using Web technologies.
 
