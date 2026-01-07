@@ -23,7 +23,7 @@ app.post('/', (req, res) => {
 
     // Parse the JSON string from the form-encoded 'data'
     const playerData = JSON.parse(data);
-    if (!playerData.name || typeof playerData.x !== 'number' || typeof playerData.y !== 'number' || typeof playerData.z !== 'number' || !playerData.velocity) {
+    if (!playerData.name || typeof playerData.x !== 'number' || typeof playerData.y !== 'number' || typeof playerData.z !== 'number' || typeof playerData.velocity !== 'number') {
       return res.status(400).json({ error: 'Invalid player data structure' });
     }
 
