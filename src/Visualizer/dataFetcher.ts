@@ -2,7 +2,7 @@ import { PlayerData } from './types';
 
 export class DataFetcher {
   constructor(
-    private dataUrl: string,
+    private dataUrl: "https://flowz-iwsdk-dev.onrender.com",
     private useMock: boolean,
     private debugMode: boolean = false
   ) {}
