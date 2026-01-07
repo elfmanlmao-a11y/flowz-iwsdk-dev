@@ -66,5 +66,4 @@ app.listen(PORT, () => {
   console.log(`Player data relay server running on port ${PORT}`);
   console.log(`POST player data to /`);
   console.log(`GET aggregated data from /data`);
-  console.log("RAW BODY:", req.body)
 });
