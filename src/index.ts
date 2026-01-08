@@ -9,6 +9,7 @@ import {
   PlaneGeometry,
   SessionMode,
   SRGBColorSpace,
+  PanelUI,
   AssetManager,
   World,
 } from "@iwsdk/core";
@@ -18,7 +19,7 @@ import {
   DistanceGrabbable,
   MovementMode,
   Interactable,
-  PlaybackMode,        // ← Fixed: was missing here
+  PlaybackMode,   
   ScreenSpace,
 } from "@iwsdk/core";
 
@@ -30,6 +31,10 @@ import { PanelSystem } from "./panel.js";
 import { Robot, RobotSystem } from "./robot.js";
 import { PlayerVisualizer } from './Visualizer/PlayerVisualizer';
 import { KeyboardMovementSystem } from './keyboardMovement';
+import { ReplayPanelSystem } from "./ReplayPanelSystem";
+
+
+
 // === ASSETS ===
 // === ASSETS — GitHub Pages Subdirectory Paths ===
 const assets: AssetManifest = {
@@ -38,7 +43,6 @@ const assets: AssetManifest = {
   environmentDesk: { url: "gltf/environmentDesk/environmentDesk.gltf", type: AssetType.GLTF, priority: "critical" },
   plantSansevieria: { url: "gltf/plantSansevieria/plantSansevieria.gltf", type: AssetType.GLTF, priority: "critical" },
   bigCity: { url: "gltf/BigCity/BigcityV1.glb", type: AssetType.GLTF, priority: "critical" },
-  summonersRift: { url: "gltf/SummonersRift/SUMMONERSRIFT.glb", type: AssetType.GLTF, priority: "critical" },
   robot: { url: "gltf/robot/robot.gltf", type: AssetType.GLTF, priority: "critical" },
 };
 
@@ -56,19 +60,11 @@ const mapConfigs: Record<string, MapConfig> = {
     position: new THREE.Vector3(0, 0.9, -2),
     scale: 0.01,
     boundingBox: new THREE.Box3(
-      new THREE.Vector3(-85, -2, -75),
-      new THREE.Vector3(85, 100, 95)
+      new THREE.Vector3(-80, -2, -70),
+      new THREE.Vector3(80, 100, 90)
     ).expandByScalar(2),
   },
-  summonersRift: {
-    meshKey: 'summonersRift',
-    position: new THREE.Vector3(0, -1.75, -2),
-    scale: 0.15,
-    boundingBox: new THREE.Box3(
-      new THREE.Vector3(-15, 17.3, -15),
-      new THREE.Vector3(15, 19, 15)
-    ).expandByScalar(2),
-  },
+
 };
 
 let currentMap: string = 'bigCity';
@@ -95,6 +91,27 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const { camera } = world;
   camera.position.set(-4, 1.5, -6);
   camera.rotateY(-Math.PI * 0.75);
+  // Replay Panel
+  const replayPanelPlane = new Mesh(
+    new PlaneGeometry(1.2, 0.8, 0.2),
+    new MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: false,
+    })
+
+  );
+
+  // Position it in front of the user
+  replayPanelPlane.position.set(0, 1.4, -1.5);
+  replayPanelPlane.renderOrder = 10;
+
+  world.createTransformEntity(replayPanelPlane)
+    .addComponent(PanelUI, { config: "/ui/replay.json" })
+    .addComponent(Interactable)
+    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget });
+
 
   // Desk
   const { scene: deskMesh } = AssetManager.getGLTF("environmentDesk")!;
@@ -105,7 +122,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
   // Load maps
   const bigCityMesh = AssetManager.getGLTF("bigCity")!.scene;
-  const summonersRiftMesh = AssetManager.getGLTF("summonersRift")!.scene;
+  
 
   // BigCity
   bigCityMesh.position.copy(mapConfigs.bigCity.position);
@@ -116,22 +133,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget })
     .addComponent(Rotation, { speed: 0.05, axis: "Y" });
 
-  // Summoner's Rift (hidden)
-  summonersRiftMesh.position.copy(mapConfigs.summonersRift.position);
-  summonersRiftMesh.scale.setScalar(mapConfigs.summonersRift.scale);
-  summonersRiftMesh.updateMatrixWorld(true);
-  world.createTransformEntity(summonersRiftMesh)
-    .addComponent(Interactable)
-    .addComponent(DistanceGrabbable, { movementMode: MovementMode.MoveFromTarget })
-    .addComponent(Rotation, { speed: 0.05, axis: "Y" });
-  summonersRiftMesh.visible = false;
 
   // Player Visualizer – attached to world root
   currentVisualizer = new PlayerVisualizer(world, bigCityMesh, {
     useMock: false,
     dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
     playerRadius: 1,
-    debugMode: true,
+    debugMode: false,
     showBounds: true,
     boundingBox: mapConfigs.bigCity.boundingBox,
     trailEnabled: true,
@@ -144,18 +152,18 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   const toggleMap = () => {
     const nextMap = currentMap === 'bigCity' ? 'summonersRift' : 'bigCity';
     const nextConfig = mapConfigs[nextMap];
-    const nextMesh = nextMap === 'bigCity' ? bigCityMesh : summonersRiftMesh;
+    const nextMesh = nextMap === 'bigCity' ? bigCityMesh : bigCityMesh;
 
     bigCityMesh.visible = nextMap === 'bigCity';
-    summonersRiftMesh.visible = nextMap === 'summonersRift';
+    
 
     currentVisualizer?.destroy();
     currentVisualizer = new PlayerVisualizer(world, nextMesh, {
       useMock: false,
       dataUrl: 'https://flowz-iwsdk-dev.onrender.com/data',
       playerRadius: 1,
-      debugMode: true,
-      showBounds: true,
+      debugMode: false,
+      showBounds: false,
       boundingBox: nextConfig.boundingBox,
       trailEnabled: true,
       trailLength: 40,
@@ -190,7 +198,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       maxInstances: 3,
       playbackMode: PlaybackMode.FadeRestart,
     });
-
+    
   // Logo
   const webxrLogoTexture = AssetManager.getTexture("webxr")!;
   webxrLogoTexture.colorSpace = SRGBColorSpace;
@@ -205,6 +213,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   // Register remaining systems
   world
     .registerSystem(PanelSystem)
+    .registerSystem(ReplayPanelSystem)
     .registerSystem(RobotSystem);
     
   // Desktop keyboard movement (WASD + Space/Shift)
